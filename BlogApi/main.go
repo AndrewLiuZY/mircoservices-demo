@@ -3,14 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
-	"syscall"
+	"net/http"
 
 	"gin-blog/models"
 	"gin-blog/pkg/logging"
 	"gin-blog/pkg/setting"
 	"gin-blog/routers"
-
-	"github.com/fvbock/endless"
 )
 
 func main() {
@@ -18,18 +16,16 @@ func main() {
 	models.Setup()
 	logging.Setup()
 
-	endless.DefaultReadTimeOut = setting.ServerSetting.ReadTimeout
-	endless.DefaultWriteTimeOut = setting.ServerSetting.WriteTimeout
-	endless.DefaultMaxHeaderBytes = 1 << 20
-	endPoint := fmt.Sprintf(":%d", setting.ServerSetting.HttpPort)
-
-	server := endless.NewServer(endPoint, routers.InitRouter())
-	server.BeforeBegin = func(add string) {
-		log.Printf("Actual pid is %d", syscall.Getpid())
+	s := &http.Server{
+		Addr:           fmt.Sprintf(":%d", setting.ServerSetting.HttpPort),
+		Handler:        routers.InitRouter(),
+		ReadTimeout:    setting.ServerSetting.ReadTimeout,
+		WriteTimeout:   setting.ServerSetting.WriteTimeout,
+		MaxHeaderBytes: 1 << 20,
 	}
 
 	log.Printf("Listening port: %d", setting.ServerSetting.HttpPort)
-	err := server.ListenAndServe()
+	err := s.ListenAndServe()
 	if err != nil {
 		log.Printf("Server err: %v", err)
 	}
